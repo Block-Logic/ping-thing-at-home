@@ -1,0 +1,27 @@
+{
+<<<<<<< HEAD
+  "name": "ping-thing-at-home",
+=======
+  "name": "log-tryout",
+>>>>>>> 286d1e1cd48edb92338683f78f44265a62968719
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+<<<<<<< HEAD
+    "@solana/web3.js": "^1.95.1",
+    "bs58": "^6.0.0",
+    "dotenv": "^16.4.5",
+    "undici": "^6.19.2"
+=======
+    "@grpc/grpc-js": "^1.11.0",
+    "@grpc/proto-loader": "^0.7.13"
+>>>>>>> 286d1e1cd48edb92338683f78f44265a62968719
+  }
+}
