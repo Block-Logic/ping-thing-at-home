@@ -45,3 +45,41 @@ export const watchSlotSent = async (gSlotSent, connection) => {
     }
   }
 };
+
+// Calculate latencies for each slot
+export function calculateLatencies(slotSent, slotLanded) {
+  if (slotSent.length !== slotLanded.length) {
+    throw new Error("The number of sent and landed slots must be the same");
+  }
+
+  return slotSent.map((sent, index) => slotLanded[index] - sent);
+}
+
+// Calculate median of an array
+function calculateMedian(arr) {
+  const sorted = [...arr].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+
+  if (sorted.length % 2 === 0) {
+    return (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+
+  return sorted[middle];
+}
+
+// Calculate average of an array
+function calculateAverage(arr) {
+  return arr.reduce((sum, value) => sum + value, 0) / arr.length;
+}
+
+// Calculate median and average latency
+export function calculateMedianAndAverageLatency(latencies) {
+  if (latencies.length === 0) {
+    return [null, null];
+  }
+
+  const medianLatency = Math.floor(calculateMedian(latencies));
+  const averageLatency = Math.floor(calculateAverage(latencies));
+
+  return {medianLatency, averageLatency};
+}
