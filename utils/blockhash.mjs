@@ -1,3 +1,4 @@
+import { cliParams } from "../ping-thing-at-home-token.mjs";
 import { sleep } from "./misc.mjs";
 
 const MAX_BLOCKHASH_FETCH_ATTEMPTS =
@@ -22,7 +23,8 @@ export const watchBlockhash = async (gBlockhash, connection) => {
       // fails to respond within 5 seconds, the promise will reject and the
       // script will log an error.
       gBlockhash.value = await Promise.race([
-        connection.getLatestBlockhash("finalized"),
+        // connection.getLatestBlockhash("finalized"),
+        getLatestBlockhash("finalized"),
         timeoutPromise,
       ]);
 
@@ -50,3 +52,26 @@ export const watchBlockhash = async (gBlockhash, connection) => {
     await sleep(5000);
   }
 };
+
+async function getLatestBlockhash(commitment) {
+  const res = await fetch(cliParams.rpc, {
+    method: "POST",
+    body: JSON.stringify({
+      method: "getLatestBlockhash",
+      jsonrpc: "2.0",
+      params: [
+        {
+          commitment,
+        },
+      ],
+      id: "1",
+    }),
+    headers: {
+      "content-type": "application/json",
+    },
+  });
+
+  const responseJson = await res.json();
+
+  return responseJson.result.value
+}
