@@ -1,47 +1,50 @@
 import { sleep } from "./misc.mjs";
 
-const MAX_SLOT_FETCH_ATTEMPTS = process.env.MAX_SLOT_FETCH_ATTEMPTS || 20;
-let attempts = 0;
-
 export const watchSlotSent = async (gSlotSent, connection) => {
   while (true) {
     try {
+      let firstShredReceivedTimer;
+
       const subscriptionId = connection.onSlotUpdate((value) => {
         if (value.type === "firstShredReceived") {
           gSlotSent.value = value.slot;
           gSlotSent.updated_at = Date.now();
-          attempts = 0;
+          clearTimeout(firstShredReceivedTimer); // Clear the timer when we receive firstShredReceived
         }
       });
 
-      // do not re-subscribe before first update, max 60s
+      const resetSubscription = async () => {
+        await connection.removeSlotUpdateListener(subscriptionId);
+        gSlotSent.value = null;
+        gSlotSent.updated_at = 0;
+      };
+
+      // Set up a timer for 5 seconds
+      firstShredReceivedTimer = setTimeout(async () => {
+        console.log(
+          "firstShredReceived not received in 5 seconds, redoing onSlotUpdate"
+        );
+        await resetSubscription();
+        return; // This will cause the outer while loop to restart
+      }, 5000);
+
+      // Wait for first update, max 60s
       const started_at = Date.now();
-      while (gSlotSent.value === null && Date.now() - started_at < 2000) {
+      while (gSlotSent.value === null && Date.now() - started_at < 60000) {
         await sleep(1);
       }
 
-      // If update not received in last 3s, re-subscribe
+      // If update received, wait until it's 3s old
       if (gSlotSent.value !== null) {
         while (Date.now() - gSlotSent.updated_at < 3000) {
           await sleep(1);
         }
       }
 
-      await connection.removeSlotUpdateListener(subscriptionId);
-      gSlotSent.value = null;
-      gSlotSent.updated_at = 0;
-
-      ++attempts;
-
-      if (attempts >= MAX_SLOT_FETCH_ATTEMPTS) {
-        console.log(
-          `${new Date().toISOString()} ERROR: Max attempts for fetching slot type "firstShredReceived" reached, exiting`
-        );
-        process.exit(0);
-      }
+      clearTimeout(firstShredReceivedTimer); // Clear the timer if we've made it this far
+      await resetSubscription();
     } catch (e) {
       console.log(`${new Date().toISOString()} ERROR: ${e}`);
-      ++attempts;
     }
   }
 };
@@ -81,5 +84,5 @@ export function calculateMedianAndAverageLatency(latencies) {
   const medianLatency = Math.floor(calculateMedian(latencies));
   const averageLatency = Math.floor(calculateAverage(latencies));
 
-  return {medianLatency, averageLatency};
+  return { medianLatency, averageLatency };
 }
