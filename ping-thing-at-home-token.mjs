@@ -195,14 +195,16 @@ async function pingThing() {
         console.log(`${new Date().toISOString()} sending: ${signature}`);
 
         // Send and wait confirmation (subscribe on confirmation before sending)
-        const resultPromise = connection.confirmTransaction(
-          {
-            signature,
-            blockhash: tx.recentBlockhash,
-            lastValidBlockHeight: tx.lastValidBlockHeight,
-          },
-          COMMITMENT_LEVEL
-        );
+        // const resultPromise = connection.confirmTransaction(
+        //   {
+        //     signature,
+        //     blockhash: tx.recentBlockhash,
+        //     lastValidBlockHeight: tx.lastValidBlockHeight,
+        //   },
+        //   COMMITMENT_LEVEL
+        // );
+
+        const resultPromise = confirmTransaction(signature);
 
         txStart = Date.now();
         const sendTxResult = await connection.sendRawTransaction(
@@ -222,14 +224,14 @@ async function pingThing() {
         let confirmedTransaction = null;
 
         while (!confirmedTransaction) {
-          const resultPromise = connection.confirmTransaction(
-            {
-              signature,
-              blockhash: tx.recentBlockhash,
-              lastValidBlockHeight: tx.lastValidBlockHeight,
-            },
-            COMMITMENT_LEVEL
-          );
+          // const resultPromise = connection.confirmTransaction(
+          //   {
+          //     signature,
+          //     blockhash: tx.recentBlockhash,
+          //     lastValidBlockHeight: tx.lastValidBlockHeight,
+          //   },
+          //   COMMITMENT_LEVEL
+          // );
 
           confirmedTransaction = await Promise.race([
             resultPromise,
@@ -398,6 +400,52 @@ function calculateStatistics(times) {
   const p90 = times[p90Index];
 
   return { median: Math.floor(median), p90: Math.floor(p90) };
+}
+
+async function confirmTransaction(signature, timeout = 90000) {
+  const startTime = Date.now();
+
+  const checkStatus = async () => {
+    const response = await fetch(cliParams.rpc, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getSignatureStatuses",
+        params: [
+          [signature],
+          {
+            searchTransactionHistory: true,
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.result && data.result.value && data.result.value[0]) {
+      const transactionStatus = data.result.value[0];
+      if (
+        transactionStatus.confirmationStatus === "confirmed" ||
+        transactionStatus.confirmationStatus === "finalized"
+      ) {
+        return data.result; // Return the entire result object
+      }
+    }
+
+    if (Date.now() - startTime > timeout) {
+      return null;
+    }
+
+    // Wait for 1 second before next check
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return checkStatus();
+  };
+
+  return checkStatus();
 }
 
 console.log(`${new Date().toISOString()} Starting script`);
