@@ -441,7 +441,7 @@ async function confirmTransaction(signature, timeout = 90000) {
     }
 
     // Wait for 1 second before next check
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 300));
     return checkStatus();
   };
 
